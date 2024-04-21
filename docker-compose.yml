@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: secure_password  # Should match with your role password for consistency
+      POSTGRES_USER: myapp_user
+      POSTGRES_DB: myapp_db
+    volumes:
+      - ./postgres:/docker-entrypoint-initdb.d
+    restart: always
+
+  web:
+    build: ./web
+    command: gunicorn app.pong_app.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - ./web:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - app-network
+    restart: always
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - web
+    networks:
+      - app-network
+    restart: always
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
